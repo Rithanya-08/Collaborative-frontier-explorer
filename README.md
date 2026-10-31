@@ -244,6 +244,29 @@ Both robots share the same coordinate frame — mark these spots on the floor so
 
 ---
 
+## Team
+
+This project was developed as a case study under the following academic context:
+
+| | |
+|---|---|
+| **Course** | 23CSE472 – Artificial Intelligence and Robotics |
+| **Mentor** | Dr. A. Baskar |
+| **Department** | Department of Computer Science and Engineering |
+| **Institution** | School of Computing, Amrita Vishwa Vidyapeetham, Coimbatore, India |
+
+### Members
+
+| Name | Roll Number |
+|---|---|
+| Gaddam Jahnavi | CB.SC.U4CSE23023 |
+| U Gayathri | CB.SC.U4CSE23026 |
+| Rithanya K A | CB.SC.U4CSE23140 |
+| Thota Neha | CB.SC.U4CSE23165 |
+| Maddipatla Hasini Reddy | CB.SC.U4CSE23529 |
+
+---
+
 ## References
 
 - Yamauchi, B. (1997). *A frontier-based approach for autonomous exploration*
