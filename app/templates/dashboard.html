@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Team Live</title>
+<style>
+  :root {
+    --bg: #f3f5fb;
+    --card: #ffffff;
+    --text: #1e2333;
+    --muted: #6b7289;
+    --line: #e6e9f2;
+    --robot-a: #ff6b6b;
+    --robot-b: #12b886;
+    --object: #7c3aed;
+    --target: #f59e0b;
+    --free: #ffffff;
+    --wall: #26304a;
+    --unknown: #e3e7f0;
+    --gridline: rgba(38, 48, 74, 0.07);
+    --good: #12b886;
+    --warn: #f59f00;
+    --bad: #fa5252;
+    --shadow: 0 6px 24px rgba(30, 35, 51, 0.08);
+    --hero: linear-gradient(120deg, #4f46e5 0%, #9333ea 50%, #db2777 100%);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1220;
+      --card: #181c2e;
+      --text: #e8eaf3;
+      --muted: #9aa1bb;
+      --line: #262b42;
+      --free: #2a3150;
+      --wall: #e8ecf8;
+      --unknown: #141829;
+      --gridline: rgba(232, 236, 248, 0.06);
+      --shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+  }
+  header {
+    background: var(--hero);
+    color: #fff;
+    padding: 18px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  header h1 { margin: 0; font-size: 22px; letter-spacing: 0.2px; }
+  header p { margin: 2px 0 0; opacity: 0.85; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #adb5bd; flex: none; }
+  .dot.on { background: #51cf66; box-shadow: 0 0 0 0 rgba(81, 207, 102, 0.7); animation: pulse 1.6s infinite; }
+  .dot.off { background: #ff8787; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(81, 207, 102, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(81, 207, 102, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(81, 207, 102, 0); }
+  }
+  main {
+    padding: 20px 24px 28px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.65fr) minmax(320px, 1fr);
+    gap: 20px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    min-width: 0;
+  }
+  .card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .card-head h2 { margin: 0; font-size: 16px; }
+  .card-body { padding: 14px 18px; }
+  .col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stat {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .stat b { color: var(--text); }
+  .btns { display: flex; gap: 6px; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 6px 11px;
+    cursor: pointer;
+  }
+  button:hover { border-color: #9333ea; }
+  button.danger:hover { border-color: var(--bad); color: var(--bad); }
+  .map-card { display: flex; flex-direction: column; }
+  #mapWrap { position: relative; flex: 1; min-height: min(68vh, 720px); background: var(--unknown); }
+  #map { width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  #map.dragging { cursor: grabbing; }
+  #mapEmpty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 15px; pointer-events: none; text-align: center; padding: 20px;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 18px 14px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 14px; border-radius: 4px; display: inline-block; border: 1px solid var(--line); }
+  .cam { position: relative; background: #000; aspect-ratio: 4 / 3; }
+  .cam img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .cam .placeholder {
+    position: absolute; inset: 0; display: flex; flex-direction: column; gap: 6px;
+    align-items: center; justify-content: center; color: #9aa1bb; font-weight: 600; text-align: center; padding: 16px;
+  }
+  .live {
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px;
+    color: var(--bad); letter-spacing: 0.5px;
+  }
+  .live .dot { background: var(--bad); }
+  .live.idle { color: var(--muted); }
+  .live.idle .dot { background: var(--muted); }
+  .dets { display: flex; flex-wrap: wrap; gap: 8px; min-height: 36px; align-items: center; }
+  .det {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 12px;
+    background: rgba(124, 58, 237, 0.1); color: var(--text); font-weight: 600;
+  }
+  .det .bar { width: 46px; height: 6px; border-radius: 4px; background: rgba(124, 58, 237, 0.2); overflow: hidden; }
+  .det .bar i { display: block; height: 100%; background: var(--object); }
+  .muted { color: var(--muted); }
+  .robots { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; grid-column: 1 / -1; }
+  .robot-head { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 12px; color: #fff; font-weight: 800; font-size: 18px;
+    display: flex; align-items: center; justify-content: center; flex: none;
+  }
+  .pill { border-radius: 999px; padding: 4px 10px; font-weight: 700; font-size: 12px; text-transform: capitalize; }
+  .pill.exploring { background: rgba(18, 184, 134, 0.15); color: #0ca678; }
+  .pill.connected { background: rgba(77, 171, 247, 0.15); color: #1c7ed6; }
+  .pill.standby { background: rgba(245, 159, 0, 0.15); color: #e67700; }
+  .pill.offline { background: rgba(134, 142, 150, 0.15); color: var(--muted); }
+  .kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kv div { background: var(--bg); border-radius: 12px; padding: 10px; }
+  .kv small { display: block; color: var(--muted); font-weight: 600; margin-bottom: 4px; }
+  .kv b { font-size: 16px; }
+  .compass { display: inline-block; width: 18px; height: 18px; vertical-align: -3px; margin-left: 6px; }
+  .range { display: grid; grid-template-columns: 52px 1fr 58px; align-items: center; gap: 10px; margin: 8px 0; }
+  .range .track { height: 10px; border-radius: 6px; background: var(--bg); overflow: hidden; }
+  .range .track i { display: block; height: 100%; border-radius: 6px; transition: width 0.25s, background 0.25s; }
+  .range span:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .objects { grid-column: 1 / -1; }
+  .obj-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+  .obj {
+    display: flex; gap: 12px; align-items: center; padding: 12px; border-radius: 14px;
+    background: var(--bg); border: 1px solid var(--line);
+  }
+  .obj .emoji { font-size: 26px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+    background: var(--card); border-radius: 12px; flex: none; }
+  .obj b { text-transform: capitalize; }
+  .obj small { display: block; color: var(--muted); margin-top: 2px; }
+  @media (max-width: 1000px) {
+    main { grid-template-columns: 1fr; padding: 16px; }
+    #mapWrap { min-height: 60vh; }
+    .robots { grid-template-columns: 1fr; }
+    header { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🤖 Robot Team Live</h1>
+    <p>Shared map, live tracking and AI object recognition</p>
+  </div>
+  <div class="chips">
+    <span class="chip" id="chipBroker"><span class="dot"></span><span>Connecting…</span></span>
+    <span class="chip" id="chipA"><span class="dot"></span><span>Robot A</span></span>
+    <span class="chip" id="chipB"><span class="dot"></span><span>Robot B</span></span>
+  </div>
+</header>
+
+<main>
+  <section class="card map-card">
+    <div class="card-head">
+      <h2>🗺️ Shared map</h2>
+      <div class="stats">
+        <span class="stat">Explored <b id="statArea">0</b> m²</span>
+        <span class="stat">Objects <b id="statObjects">0</b></span>
+        <span class="stat">Scans <b id="statScans">0</b></span>
+      </div>
+      <div class="btns">
+        <button id="zoomOut" title="Zoom out">−</button>
+        <button id="zoomIn" title="Zoom in">+</button>
+        <button id="fit" title="Fit everything in view">Fit</button>
+        <button id="reset" class="danger" title="Clear the map, paths and objects">Reset</button>
+      </div>
+    </div>
+    <div id="mapWrap">
+      <canvas id="map"></canvas>
+      <div id="mapEmpty">Waiting for the robots to start scanning…</div>
+    </div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--robot-a)"></i>Robot A</span>
+      <span><i class="sw" style="background:var(--robot-b)"></i>Robot B</span>
+      <span><i class="sw" style="background:var(--free)"></i>Free space</span>
+      <span><i class="sw" style="background:var(--wall)"></i>Obstacle</span>
+      <span><i class="sw" style="background:var(--unknown)"></i>Unexplored</span>
+      <span><i class="sw" style="background:var(--object)"></i>Recognised object</span>
+      <span><i class="sw" style="background:var(--target)"></i>Current target</span>
+    </div>
+  </section>
+
+  <div class="col">
+    <section class="card">
+      <div class="card-head">
+        <h2>📷 Robot A · AI camera</h2>
+        <span class="live idle" id="liveA"><span class="dot"></span>OFFLINE</span>
+      </div>
+      <div class="cam">
+        <img id="camA" alt="Robot A camera with object recognition">
+        <div class="placeholder" id="camAoff"><span>📷</span><span>Camera starts when Robot A explores</span></div>
+      </div>
+      <div class="card-body">
+        <div class="muted" style="margin-bottom:8px;font-weight:600">Seeing right now</div>
+        <div class="dets" id="detsA"><span class="muted">Nothing detected</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <h2>📷 Robot B · camera</h2>
+        <span class="live idle" id="liveB"><span class="dot"></span>OFFLINE</span>
+      </div>
+      <div class="cam">
+        <img id="camB" alt="Robot B camera">
+        <div class="placeholder" id="camBoff"><span>📷</span><span>ESP32-CAM offline</span></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="robots" id="robotCards"></div>
+
+  <section class="card objects">
+    <div class="card-head"><h2>🔎 Recognised objects</h2><span class="muted">Placed on the map by the AI camera</span></div>
+    <div class="card-body"><div class="obj-list" id="objList"></div></div>
+  </section>
+</main>
+
+<script>
+const ROBOT_INFO = {
+  A: { name: "Robot A", board: "Raspberry Pi 5", colorVar: "--robot-a" },
+  B: { name: "Robot B", board: "ESP32", colorVar: "--robot-b" },
+};
+const EMOJI = {
+  person: "🧍", cat: "🐈", dog: "🐕", bird: "🐦", backpack: "🎒", umbrella: "☂️", handbag: "👜",
+  suitcase: "🧳", "sports ball": "⚽", bottle: "🧴", "wine glass": "🍷", cup: "☕", fork: "🍴",
+  knife: "🔪", spoon: "🥄", bowl: "🥣", banana: "🍌", apple: "🍎", orange: "🍊", chair: "🪑",
+  couch: "🛋️", "potted plant": "🪴", bed: "🛏️", "dining table": "🍽️", toilet: "🚽", tv: "📺",
+  laptop: "💻", mouse: "🖱️", remote: "🎛️", keyboard: "⌨️", "cell phone": "📱", microwave: "📟",
+  oven: "🍳", toaster: "🍞", sink: "🚰", refrigerator: "🧊", book: "📘", clock: "🕒", vase: "🏺",
+  scissors: "✂️", "teddy bear": "🧸", "hair drier": "💨", toothbrush: "🪥", bicycle: "🚲",
+};
+const emoji = (label) => EMOJI[label] || "📦";
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (v, d = 2) => (v === null || v === undefined ? "—" : Number(v).toFixed(d));
+
+let state = null;
+let mapInfo = null;
+const mapCanvas = document.createElement("canvas");  // 1 px per grid cell
+const view = { cx: 0, cy: 0, scale: 80, autoFit: true };
+const shown = {};  // smoothed robot poses for drawing
+
+// ---------- live data ----------
+// Live push (server-sent events) by default; "?poll=1" polls once a second
+// instead, for networks/browsers that buffer event streams.
+async function poll() {
+  try {
+    const [s, m] = await Promise.all([fetch("/api/state"), fetch("/api/map")]);
+    state = await s.json();
+    const map = await m.json();
+    if (!mapInfo || map.version !== mapInfo.version) setMap(map);
+    render();
+  } catch (e) {
+    setChip("chipBroker", false, "Dashboard unreachable");
+  }
+  setTimeout(poll, 1000);
+}
+
+function connect() {
+  if (new URLSearchParams(location.search).has("poll")) return poll();
+  const es = new EventSource("/events");
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.map) setMap(msg.map);
+    state = msg.state;
+    render();
+  };
+  es.onerror = () => setChip("chipBroker", false, "Reconnecting to dashboard…");
+}
+
+function setMap(m) {
+  if (m.empty) { mapInfo = null; return; }
+  const raw = atob(m.cells);
+  mapCanvas.width = m.w;
+  mapCanvas.height = m.h;
+  const ctx = mapCanvas.getContext("2d");
+  const img = ctx.createImageData(m.w, m.h);
+  const free = hexToRgb(css("--free")), wall = hexToRgb(css("--wall"));
+  for (let row = 0; row < m.h; row++) {
+    const imgRow = m.h - 1 - row;  // grid row 0 is the lowest y; image row 0 is the top
+    for (let col = 0; col < m.w; col++) {
+      const v = raw.charCodeAt(row * m.w + col);
+      if (v === 0) continue;  // unknown stays transparent
+      const c = v === 2 ? wall : free, i = (imgRow * m.w + col) * 4;
+      img.data[i] = c[0]; img.data[i + 1] = c[1]; img.data[i + 2] = c[2]; img.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  mapInfo = m;
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16));
+}
+
+// ---------- page ----------
+function setChip(id, on, text) {
+  const chip = document.getElementById(id);
+  chip.querySelector(".dot").className = "dot " + (on ? "on" : "off");
+  chip.lastElementChild.textContent = text;
+}
+
+function render() {
+  if (!state) return;
+  setChip("chipBroker", state.connected, state.connected ? `Broker ${state.broker}` : "Broker disconnected");
+  for (const id of ["A", "B"]) {
+    const r = state.robots[id];
+    setChip("chip" + id, r.status === "exploring", `${ROBOT_INFO[id].name} · ${r.status}`);
+  }
+  document.getElementById("statArea").textContent = fmt(state.area_m2, 1);
+  document.getElementById("statObjects").textContent = state.objects.length;
+  document.getElementById("statScans").textContent = state.robots.A.scans + state.robots.B.scans;
+  document.getElementById("mapEmpty").style.display = mapInfo || anyPose() ? "none" : "flex";
+  renderCamera("A");
+  renderCamera("B");
+  renderDetections();
+  renderRobotCards();
+  renderObjects();
+}
+
+const anyPose = () => state && Object.values(state.robots).some((r) => r.pose);
+
+const camUrls = {};
+function renderCamera(id) {
+  const r = state.robots[id];
+  const img = document.getElementById("cam" + id), off = document.getElementById("cam" + id + "off");
+  const live = document.getElementById("live" + id);
+  const url = r.cam;
+  if (url !== camUrls[id]) {
+    camUrls[id] = url;
+    if (url) { img.src = url; } else { img.removeAttribute("src"); }
+  }
+  const showing = Boolean(url) && !img.dataset.failed;
+  img.style.display = showing ? "block" : "none";
+  off.style.display = showing ? "none" : "flex";
+  live.className = "live" + (showing ? "" : " idle");
+  live.lastChild.textContent = showing ? "LIVE" : "OFFLINE";
+}
+for (const id of ["A", "B"]) {
+  const img = document.getElementById("cam" + id);
+  img.addEventListener("error", () => {
+    img.dataset.failed = "1";
+    setTimeout(() => {  // retry: the robot may have restarted its camera
+      delete img.dataset.failed;
+      if (camUrls[id]) img.src = camUrls[id] + (camUrls[id].includes("?") ? "&" : "?") + "t=" + Date.now();
+    }, 5000);
+  });
+  img.addEventListener("load", () => delete img.dataset.failed);
+}
+
+function renderDetections() {
+  const box = document.getElementById("detsA");
+  const dets = [...state.robots.A.detections].sort((a, b) => b.confidence - a.confidence);
+  if (!dets.length) { box.innerHTML = '<span class="muted">Nothing detected</span>'; return; }
+  box.innerHTML = dets.map((d) => `
+    <span class="det">${emoji(d.label)} ${escapeHtml(d.label)}
+      <span class="bar"><i style="width:${Math.round(d.confidence * 100)}%"></i></span>
+      ${Math.round(d.confidence * 100)}%</span>`).join("");
+}
+
+function renderRobotCards() {
+  document.getElementById("robotCards").innerHTML = ["A", "B"].map((id) => {
+    const r = state.robots[id], info = ROBOT_INFO[id];
+    const [x, y, h] = r.pose || [null, null, null];
+    const heading = h === null ? "—" : `${Math.round(h)}°<svg class="compass" viewBox="-10 -10 20 20">
+        <circle r="9" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="1.5"/>
+        <path d="M0,-7 L3,3 L0,1 L-3,3 Z" fill="var(${info.colorVar})" transform="rotate(${90 - h})"/></svg>`;
+    const target = r.target ? `(${fmt(r.target[0])}, ${fmt(r.target[1])})` : "—";
+    const ranges = ["front", "left", "right"].map((k) => rangeRow(k, r.ranges ? r.ranges[k] : null)).join("");
+    return `<section class="card">
+      <div class="card-head">
+        <div class="robot-head">
+          <div class="avatar" style="background:var(${info.colorVar})">${id}</div>
+          <div><h2>${info.name}</h2><span class="muted">${info.board}</span></div>
+        </div>
+        <span class="pill ${r.status}">${r.status}</span>
+      </div>
+      <div class="card-body">
+        <div class="kv">
+          <div><small>Position (m)</small><b>${x === null ? "—" : `${fmt(x)}, ${fmt(y)}`}</b></div>
+          <div><small>Heading</small><b>${heading}</b></div>
+          <div><small>Target</small><b>${target}</b></div>
+        </div>
+        ${ranges}
+      </div>
+    </section>`;
+  }).join("");
+}
+
+function rangeRow(name, v) {
+  const has = v !== null && v !== undefined;
+  const pct = has ? Math.min(v, 2) / 2 * 100 : 0;
+  const color = !has ? "transparent" : v < 0.3 ? "var(--bad)" : v < 0.6 ? "var(--warn)" : "var(--good)";
+  return `<div class="range"><span class="muted" style="text-transform:capitalize;font-weight:600">${name}</span>
+    <span class="track"><i style="width:${pct}%;background:${color}"></i></span>
+    <span>${has ? fmt(v) + " m" : "—"}</span></div>`;
+}
+
+function renderObjects() {
+  const list = document.getElementById("objList");
+  const objs = [...state.objects].sort((a, b) => b.count - a.count);
+  if (!objs.length) { list.innerHTML = '<span class="muted">No objects recognised yet</span>'; return; }
+  list.innerHTML = objs.map((o) => `<div class="obj">
+      <div class="emoji">${emoji(o.label)}</div>
+      <div><b>${escapeHtml(o.label)}</b>
+        <small>seen ×${o.count} · by Robot ${escapeHtml(o.source)} · ${Math.round(o.confidence * 100)}%</small>
+        <small>at (${fmt(o.x)}, ${fmt(o.y)}) m</small></div></div>`).join("");
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// ---------- map canvas ----------
+const canvas = document.getElementById("map");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  if (canvas.width === Math.round(canvas.clientWidth * dpr) && canvas.height === Math.round(canvas.clientHeight * dpr)) return;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener("resize", resize);
+
+const W = () => canvas.clientWidth, H = () => canvas.clientHeight;
+const toScreen = (x, y) => [W() / 2 + (x - view.cx) * view.scale, H() / 2 - (y - view.cy) * view.scale];
+const toWorld = (sx, sy) => [view.cx + (sx - W() / 2) / view.scale, view.cy - (sy - H() / 2) / view.scale];
+
+function fitView() {
+  let xs = [], ys = [];
+  if (mapInfo) {
+    xs.push(mapInfo.x0, mapInfo.x0 + mapInfo.w * mapInfo.res);
+    ys.push(mapInfo.y0, mapInfo.y0 + mapInfo.h * mapInfo.res);
+  }
+  if (state) {
+    for (const r of Object.values(state.robots)) {
+      xs.push(r.start[0]); ys.push(r.start[1]);
+      if (r.pose) { xs.push(r.pose[0]); ys.push(r.pose[1]); }
+    }
+    for (const o of state.objects) { xs.push(o.x); ys.push(o.y); }
+  }
+  if (!xs.length) { xs = [-1.5, 1.5]; ys = [-1.5, 1.5]; }
+  const minX = Math.min(...xs) - 0.4, maxX = Math.max(...xs) + 0.4;
+  const minY = Math.min(...ys) - 0.4, maxY = Math.max(...ys) + 0.4;
+  const spanX = Math.max(maxX - minX, 3), spanY = Math.max(maxY - minY, 3);
+  view.cx = (minX + maxX) / 2;
+  view.cy = (minY + maxY) / 2;
+  view.scale = Math.min(W() / spanX, H() / spanY);
+}
+
+function lerpAngle(a, b, t) {
+  const d = ((b - a + 540) % 360) - 180;
+  return (a + d * t + 360) % 360;
+}
+
+function draw() {
+  requestAnimationFrame(draw);
+  resize();  // cheap no-op unless the card changed size (e.g. the camera column grew)
+  if (view.autoFit) fitView();
+  ctx.clearRect(0, 0, W(), H());
+
+  drawGridLines();
+  if (mapInfo) {
+    const [sx, sy] = toScreen(mapInfo.x0, mapInfo.y0 + mapInfo.h * mapInfo.res);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(mapCanvas, sx, sy, mapInfo.w * mapInfo.res * view.scale, mapInfo.h * mapInfo.res * view.scale);
+  }
+  if (!state) return;
+
+  for (const [id, r] of Object.entries(state.robots)) drawStart(id, r);
+  for (const [id, r] of Object.entries(state.robots)) drawPath(id, r);
+  for (const [id, r] of Object.entries(state.robots)) drawTarget(id, r);
+  for (const o of state.objects) drawObject(o);
+  for (const [id, r] of Object.entries(state.robots)) drawRobot(id, r);
+}
+
+function drawGridLines() {
+  const [x0, y1] = toWorld(0, 0), [x1, y0] = toWorld(W(), H());
+  ctx.strokeStyle = css("--gridline");
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = Math.floor(x0); x <= x1; x++) { const [sx] = toScreen(x, 0); ctx.moveTo(sx, 0); ctx.lineTo(sx, H()); }
+  for (let y = Math.floor(y0); y <= y1; y++) { const [, sy] = toScreen(0, y); ctx.moveTo(0, sy); ctx.lineTo(W(), sy); }
+  ctx.stroke();
+}
+
+function drawStart(id, r) {
+  const [sx, sy] = toScreen(r.start[0], r.start[1]);
+  ctx.save();
+  ctx.strokeStyle = css(ROBOT_INFO[id].colorVar);
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(sx - 9, sy - 9, 18, 18);
+  ctx.restore();
+}
+
+function drawPath(id, r) {
+  if (r.path.length < 2) return;
+  ctx.save();
+  ctx.strokeStyle = css(ROBOT_INFO[id].colorVar);
+  ctx.globalAlpha = 0.75;
+  ctx.lineWidth = 3;
+  ctx.lineJoin = ctx.lineCap = "round";
+  ctx.beginPath();
+  r.path.forEach(([x, y], i) => { const [sx, sy] = toScreen(x, y); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTarget(id, r) {
+  if (!r.target || !r.pose || r.status !== "exploring") return;
+  const [rx, ry] = toScreen(r.pose[0], r.pose[1]), [tx, ty] = toScreen(r.target[0], r.target[1]);
+  ctx.save();
+  ctx.strokeStyle = css("--target");
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 5]);
+  ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(tx, ty); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(tx, ty, 9, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(tx, ty, 3, 0, Math.PI * 2); ctx.fillStyle = css("--target"); ctx.fill();
+  ctx.restore();
+}
+
+function drawObject(o) {
+  const [sx, sy] = toScreen(o.x, o.y);
+  ctx.save();
+  ctx.fillStyle = css("--object");
+  ctx.beginPath(); ctx.arc(sx, sy, 15, 0, Math.PI * 2); ctx.fill();
+  ctx.font = "16px system-ui, 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(emoji(o.label), sx, sy + 1);
+  const text = `${o.label} ×${o.count}`;
+  ctx.font = "600 12px system-ui, sans-serif";
+  const w = ctx.measureText(text).width + 12;
+  ctx.fillStyle = css("--card");
+  ctx.globalAlpha = 0.92;
+  roundRect(sx + 18, sy - 10, w, 20, 8); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = css("--object");
+  ctx.textAlign = "left";
+  ctx.fillText(text, sx + 24, sy);
+  ctx.restore();
+}
+
+function drawRobot(id, r) {
+  if (!r.pose) return;
+  const s = shown[id] || (shown[id] = { x: r.pose[0], y: r.pose[1], h: r.pose[2] });
+  s.x += (r.pose[0] - s.x) * 0.2;
+  s.y += (r.pose[1] - s.y) * 0.2;
+  s.h = lerpAngle(s.h, r.pose[2], 0.2);
+  const color = css(ROBOT_INFO[id].colorVar);
+  const [sx, sy] = toScreen(s.x, s.y);
+  const rad = Math.max(0.09 * view.scale, 11);
+  const a = (-s.h * Math.PI) / 180;  // canvas y points down
+
+  // live ultrasonic rays
+  if (r.status === "exploring") {
+    const rays = { front: 0, left: 90, right: -90 };
+    for (const [k, off] of Object.entries(rays)) {
+      const d = r.ranges ? r.ranges[k] : null;
+      if (d === null || d === undefined) continue;
+      const ang = ((-(s.h + off)) * Math.PI) / 180;
+      const len = Math.min(d, 4) * view.scale;
+      ctx.save();
+      ctx.strokeStyle = color; ctx.globalAlpha = 0.35; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(ang) * len, sy + Math.sin(ang) * len); ctx.stroke();
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath(); ctx.arc(sx + Math.cos(ang) * len, sy + Math.sin(ang) * len, 3, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  ctx.save();
+  if (r.status === "exploring") {  // soft halo
+    ctx.fillStyle = color; ctx.globalAlpha = 0.18;
+    ctx.beginPath(); ctx.arc(sx, sy, rad * 1.9, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = r.status === "offline" ? 0.45 : 1;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(sx, sy, rad, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // heading arrow
+  ctx.beginPath();
+  ctx.moveTo(sx + Math.cos(a) * (rad + 11), sy + Math.sin(a) * (rad + 11));
+  ctx.lineTo(sx + Math.cos(a + 2.5) * (rad + 1), sy + Math.sin(a + 2.5) * (rad + 1));
+  ctx.lineTo(sx + Math.cos(a - 2.5) * (rad + 1), sy + Math.sin(a - 2.5) * (rad + 1));
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.font = `800 ${Math.round(rad)}px system-ui, sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(id, sx, sy + 1);
+  ctx.restore();
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+// pan / zoom
+let drag = null;
+canvas.addEventListener("pointerdown", (e) => {
+  drag = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy };
+  canvas.setPointerCapture(e.pointerId); canvas.classList.add("dragging");
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  view.autoFit = false;
+  view.cx = drag.cx - (e.clientX - drag.x) / view.scale;
+  view.cy = drag.cy + (e.clientY - drag.y) / view.scale;
+});
+canvas.addEventListener("pointerup", () => { drag = null; canvas.classList.remove("dragging"); });
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  zoomAt(e.offsetX, e.offsetY, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+}, { passive: false });
+
+function zoomAt(sx, sy, factor) {
+  view.autoFit = false;
+  const [wx, wy] = toWorld(sx, sy);
+  view.scale = Math.min(Math.max(view.scale * factor, 8), 600);
+  const [nx, ny] = toWorld(sx, sy);
+  view.cx += wx - nx; view.cy += wy - ny;
+}
+document.getElementById("zoomIn").onclick = () => zoomAt(W() / 2, H() / 2, 1.3);
+document.getElementById("zoomOut").onclick = () => zoomAt(W() / 2, H() / 2, 1 / 1.3);
+document.getElementById("fit").onclick = () => { view.autoFit = true; };
+document.getElementById("reset").onclick = async () => {
+  if (!confirm("Clear the shared map, paths and objects on this dashboard? The robots keep their own maps.")) return;
+  await fetch("/api/reset", { method: "POST" });
+  mapInfo = null;
+};
+
+resize();
+draw();
+connect();
+</script>
+</body>
+</html>

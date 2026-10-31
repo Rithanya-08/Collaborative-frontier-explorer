@@ -1,0 +1,87 @@
+# Raspberry Pi Robot Configuration File
+# Modify these parameters based on your hardware setup
+
+# Motor Configuration
+# 2x TB6612FNG drivers, 4 TT motors (front-left, rear-left, front-right,
+# rear-right). STBY is shared by both drivers. See "Wiring details.docx".
+motor:
+  driver_type: "TB6612FNG"
+  stby_pin: 21
+  motors:
+    front_left:  { pwm_pin: 12, in1_pin: 5,  in2_pin: 6,  invert: false }
+    rear_left:   { pwm_pin: 13, in1_pin: 16, in2_pin: 20, invert: false }
+    front_right: { pwm_pin: 18, in1_pin: 23, in2_pin: 24, invert: true }
+    rear_right:  { pwm_pin: 19, in1_pin: 25, in2_pin: 26, invert: true }
+  pwm_frequency: 1000  # Hz
+  max_speed: 255  # PWM max value
+  default_speed: 150  # Default movement speed
+
+# IMU Configuration (MPU6050 on Robot A's breadboard, I2C bus 1 at 0x68 -
+# read directly via smbus2; enable I2C with raspi-config on a fresh Pi)
+imu:
+  i2c_address: 0x68  # Default address (0x69 if AD0 pin is HIGH)
+  scl_pin: 3   # Pi hardware I2C (SCL1)
+  sda_pin: 2   # Pi hardware I2C (SDA1)
+  accel_scale: 9.81  # m/s^2
+  gyro_scale: 1.0    # degrees/s
+  calibrate_on_start: true
+
+# Ultrasonic Sensor Configuration
+# 3x HC-SR04 sensors sharing a single TRIG line (each ECHO needs a
+# voltage divider down to 3.3V before reaching the Pi).
+ultrasonic:
+  trig_pin: 27  # shared by all sensors
+  sensors:
+    - id: "front"
+      echo_pin: 17
+      max_distance: 4.0  # meters
+    - id: "left"
+      echo_pin: 22
+      max_distance: 4.0
+    - id: "right"
+      echo_pin: 7
+      max_distance: 4.0
+
+# Robot Dimensions
+robot:
+  wheel_diameter: 0.065  # meters
+  wheel_base: 0.15  # distance between wheels
+  max_linear_velocity: 0.5  # m/s
+  max_angular_velocity: 2.0  # rad/s
+
+# SLAM Configuration
+slam:
+  grid_width: 500  # cells
+  grid_height: 500  # cells
+  grid_resolution: 0.05  # meters per cell
+  grid_origin_x: -12.5  # world x at grid origin
+  grid_origin_y: -12.5  # world y at grid origin
+  hit_probability: 80  # occupancy value for hits
+  miss_probability: 20  # occupancy value for misses
+
+# Navigation Configuration
+navigation:
+  frontier_explorer:
+    min_frontier_size: 10  # minimum frontier cluster size
+    unknown_threshold: 50  # occupancy threshold for unknown
+  
+  collision_avoidance:
+    safety_distance: 0.3  # meters
+    stop_distance: 0.2    # meters
+  
+  path_planning:
+    algorithm: "frontier_based"  # "frontier_based", "random", "sweep"
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "logs/robot.log"
+  file_size_mb: 10
+  backup_count: 5
+
+# Visualization Server
+server:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+  update_frequency: 10  # Hz
