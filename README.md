@@ -14,13 +14,15 @@ Two robots explore an unknown room simultaneously. Each robot builds its own occ
 |---|---|---|
 | **Brain** | Raspberry Pi 4 (runs Python) | Laptop via `hardware/esp32_robot.py` |
 | **Body** | Raspberry Pi 4 + GPIO | ESP32 DevKit (38-pin, Arduino/PlatformIO) |
-| **Camera** | ESP32-CAM (YOLOv8 object detection) | — |
+| **Camera** | **RPi Camera Module (OV5647)** — YOLOv8n inference on the Pi (`picamera2`) | **ESP32-CAM (AI Thinker, OV2640)** — raw MJPEG stream over WiFi only |
 | **Motors** | 4× TT motors, L298N driver | 4× TT motors, 2× TB6612FNG drivers |
 | **Ranging** | 3× HC-SR04 ultrasonic (front/left/right) | 3× HC-SR04 ultrasonic (front/left/right) |
 | **IMU** | MPU6050 (I2C) | MPU6050 (I2C) |
 | **Firmware** | Python (`main.py`) | C++ PlatformIO (`firmware/robot_b/`) |
 
 Robot B's **body** (motors, sensors) is controlled by the ESP32. Its **brain** (SLAM, frontier planning, MQTT logic) runs on the laptop inside `hardware/esp32_robot.py`, which sends timed move commands over MQTT and receives sensor state back at 10 Hz.
+
+Robot A's **Pi Camera Module** runs YOLOv8n (ONNX via OpenCV DNN) directly on the Raspberry Pi at ~3 fps, estimating each object's bearing from the frame and range from the front ultrasonic to place it on the shared map. Robot B's **ESP32-CAM** is a separate board (no wires to the DevKit) that streams raw MJPEG at `http://<esp32cam-ip>:81/stream`; its stream URL is published to MQTT (`robot/B/cam`) so the laptop can pick it up without the serial monitor.
 
 ---
 
@@ -103,8 +105,8 @@ Robot B's **body** (motors, sensors) is controlled by the ESP32. Its **brain** (
 │   └── robot_communicator.py  # MQTT pub/sub, MapMerger, CoordinationPlanner
 │
 ├── vision/
-│   ├── object_detector.py     # YOLOv8n inference + bearing estimation (Robot A)
-│   └── live_view.py           # MJPEG stream from ESP32-CAM
+│   ├── object_detector.py     # YOLOv8n (ONNX/OpenCV DNN) on RPi Camera Module — Robot A only
+│   └── live_view.py           # Standalone Pi camera live view (no driving)
 │
 ├── app/
 │   ├── web_server.py          # Flask dashboard (map + robot status)
