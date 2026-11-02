@@ -221,9 +221,9 @@ Both robots share the same coordinate frame — mark these spots on the floor so
 ---
 ## Demo Videos
 **Single robot Exploration**
-https://github.com/user-attachments/assets/51573fef-a1c3-4617-8ad4-3582383ead9d
+https://github.com/user-attachments/assets/96c7784e-9b50-4ee2-8420-31af2a52803b
 **Multi robot Exploration**
-https://github.com/user-attachments/assets/e8d8fe13-69ec-4073-a1e2-be1c797bf2f5
+https://github.com/user-attachments/assets/b64f04a5-bb10-46d2-ad42-ce4100170598
 
 **Shared map**
 <img width="1200" height="1200" alt="Image" src="https://github.com/user-attachments/assets/94ce3950-c4dd-4c5d-9237-3a3915faccfa" />
