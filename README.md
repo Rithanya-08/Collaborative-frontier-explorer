@@ -13,9 +13,9 @@ Two robots explore an unknown room simultaneously. Each robot builds its own occ
 | | Robot A | Robot B |
 |---|---|---|
 | **Brain** | Raspberry Pi 4 (runs Python) | Laptop via `hardware/esp32_robot.py` |
-| **Body** | Raspberry Pi 4 + GPIO | ESP32 DevKit (38-pin, Arduino/PlatformIO) |
-| **Camera** | **RPi Camera Module (OV5647)** — YOLOv8n inference on the Pi (`picamera2`) | **ESP32-CAM (AI Thinker, OV2640)** — raw MJPEG stream over WiFi only |
-| **Motors** | 4× TT motors, L298N driver | 4× TT motors, 2× TB6612FNG drivers |
+| **Body** | Raspberry Pi 4 + GPIO | ESP32 DevKit (38-pin,PlatformIO) |
+| **Camera** | **RPi Camera Module (OV5647)** — YOLOv8n inference on the Pi (`picamera2`) | **ESP32-CAM (OV2640)** — raw MJPEG stream over WiFi only |
+| **Motors** | 4× TT motors,2x TB6612FNG driver | 4× TT motors, 2× TB6612FNG drivers |
 | **Ranging** | 3× HC-SR04 ultrasonic (front/left/right) | 3× HC-SR04 ultrasonic (front/left/right) |
 | **IMU** | MPU6050 (I2C) | MPU6050 (I2C) |
 | **Firmware** | Python (`main.py`) | C++ PlatformIO (`firmware/robot_b/`) |
