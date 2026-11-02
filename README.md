@@ -219,7 +219,16 @@ Place the robots on marked floor spots before running:
 Both robots share the same coordinate frame — mark these spots on the floor so the merged map is accurate.
 
 ---
+## Demo Videos
+**Single robot Exploration**
+https://github.com/user-attachments/assets/51573fef-a1c3-4617-8ad4-3582383ead9d
+**Multi robot Exploration**
+https://github.com/user-attachments/assets/e8d8fe13-69ec-4073-a1e2-be1c797bf2f5
 
+**Shared map**
+<img width="1200" height="1200" alt="Image" src="https://github.com/user-attachments/assets/94ce3950-c4dd-4c5d-9237-3a3915faccfa" />
+
+---
 ## Performance Metrics
 
 | Metric | Measured |
